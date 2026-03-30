@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alloc8 — Noisy Beast</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f0ede8;
+  --surface: #ffffff;
+  --surface-2: #f7f5f2;
+  --border: #e2ddd8;
+  --border-light: #ede9e4;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5a5a5a;
+  --text-muted: #9a9a9a;
+  --blue-dark: #0f3460;
+  --blue: #1a5fc8;
+  --blue-mid: #2d7ae0;
+  --blue-light: #e8f0fc;
+  --blue-pale: #f0f5ff;
+  --blue-accent: #4a9aff;
+  --red: #e05252;
+  --red-light: #fdf0f0;
+  --yellow: #d4960a;
+  --yellow-light: #fdf8e8;
+  --green: #1a8a4a;
+  --green-light: #edf7f2;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Figtree', sans-serif;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text-primary); font-family: var(--sans); min-height: 100vh; font-size: 14px; }
+
+/* HEADER */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 200; }
+.logo-mark { width: 32px; height: 32px; background: var(--blue-dark); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; letter-spacing: -0.5px; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-product { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+.header-sub { font-size: 11px; color: var(--text-muted); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+/* BUTTONS */
+.btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-primary { background: var(--blue); color: white; }
+.btn-primary:hover { background: var(--blue-mid); }
+.btn-outline { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+.btn-danger { background: transparent; color: var(--text-muted); border: none; padding: 4px 8px; font-size: 14px; cursor: pointer; }
+.btn-danger:hover { color: var(--red); }
+.btn-sm { font-size: 12px; padding: 5px 10px; }
+
+/* NAV TABS */
+.nav-tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; }
+.nav-tab { padding: 14px 18px; font-size: 14px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; }
+.nav-tab:hover { color: var(--text-primary); }
+.nav-tab.active { color: var(--blue-dark); font-weight: 700; border-bottom-color: var(--blue-dark); }
+
+/* META BAR */
+.meta-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.meta-field { display: flex; align-items: center; gap: 8px; }
+.meta-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.meta-input { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--text-primary); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; transition: all 0.15s; min-width: 180px; }
+.meta-input:focus { outline: none; border-color: var(--blue); background: var(--blue-pale); }
+.meta-input::placeholder { color: var(--text-muted); }
+.meta-divider { width: 1px; height: 20px; background: var(--border); }
+.saved-badge { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+/* LAYOUT */
+.page-content { padding: 28px 32px; max-width: 1440px; margin: 0 auto; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* SECTION HEADERS */
+.section-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 16px; }
+.section-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.section-sub { font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-top: 3px; }
+
+/* UPLOAD */
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.dropzone-card { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius); padding: 36px 24px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
+.dropzone-card:hover, .dropzone-card.drag-over { border-color: var(--blue); background: var(--blue-pale); }
+.dropzone-card input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.dropzone-icon { font-size: 32px; margin-bottom: 12px; }
+.dropzone-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.dropzone-sub { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.dropzone-sub strong { color: var(--blue); }
+
+.uploaded-files { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.uploaded-files-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.uploaded-files-header h3 { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.file-list { padding: 4px 0; min-height: 60px; }
+.file-item { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border-light); }
+.file-item:last-child { border-bottom: none; }
+.file-icon { width: 32px; height: 32px; background: var(--blue-light); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+.file-status { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+.status-ok { background: var(--green-light); color: var(--green); }
+.status-err { background: var(--red-light); color: var(--red); }
+.empty-files { padding: 28px 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* MANUAL ADD */
+.manual-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px; }
+.manual-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+.manual-inputs { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.input-group { display: flex; flex-direction: column; gap: 5px; }
+.input-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.input-group input { font-family: var(--sans); font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text-primary); transition: all 0.15s; }
+.input-group input:focus { outline: none; border-color: var(--blue); background: var(--blue-pale); }
+.input-group input::placeholder { color: var(--text-muted); }
+.ig-wide { width: 180px; }
+.ig-narrow { width: 100px; }
+.ig-xnarrow { width: 80px; }
+
+/* SUMMARY CARDS */
+.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); animation: fadeUp 0.3s ease both; }
+.stat-card:nth-child(2) { animation-delay: 0.05s; }
+.stat-card:nth-child(3) { animation-delay: 0.1s; }
+.stat-card:nth-child(4) { animation-delay: 0.15s; }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.stat-value.blue { color: var(--blue); }
+.stat-value.green { color: var(--green); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-family: var(--mono); }
+
+/* TABLE CARD */
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; animation: fadeUp 0.3s ease 0.1s both; }
+.table-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.table-card-header h3 { font-size: 14px; font-weight: 700; }
+.table-card-meta { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 2px; }
+
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+thead th.col-calc { color: var(--blue); }
+thead th.col-eff { color: var(--blue-dark); }
+tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--blue-pale); }
+td { padding: 10px 16px; font-size: 13px; vertical-align: middle; }
+td input { font-family: var(--sans); font-size: 13px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; color: var(--text-primary); transition: all 0.15s; }
+td input:focus { outline: none; border-color: var(--blue); background: var(--blue-pale); }
+td input:hover:not(:focus) { border-color: var(--border); background: var(--surface-2); }
+td.ch { font-weight: 700; min-width: 120px; }
+td.mono { font-family: var(--mono); font-size: 12px; }
+td.calc { font-family: var(--mono); font-size: 13px; color: var(--blue); font-weight: 600; }
+td.eff { font-family: var(--mono); font-size: 14px; color: var(--blue-dark); font-weight: 700; }
+td.bgt { font-family: var(--mono); font-weight: 700; }
+tfoot tr td { background: var(--blue-dark); color: white; font-weight: 700; font-family: var(--mono); font-size: 13px; border-top: 2px solid var(--blue); }
+
+/* share bar */
+.share-wrap { display: flex; align-items: center; gap: 8px; }
+.share-bg { height: 6px; border-radius: 3px; background: var(--blue-light); width: 80px; flex-shrink: 0; }
+.share-fill { height: 6px; border-radius: 3px; background: var(--blue); transition: width 0.3s; }
+.share-pct { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+
+/* attention badges */
+.attn-badge { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.attn-high { background: var(--blue-light); color: var(--blue-dark); }
+.attn-mid { background: var(--yellow-light); color: var(--yellow); }
+.attn-low { background: var(--red-light); color: var(--red); }
+td input.attn-high-input { color: var(--blue-dark); font-weight: 700; }
+td input.attn-mid-input  { color: var(--yellow); font-weight: 600; }
+td input.attn-low-input  { color: var(--red); font-weight: 600; }
+
+/* change pills */
+.change-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.ch-aligned { background: var(--green-light); color: var(--green); }
+.ch-up { background: var(--red-light); color: var(--red); }
+.ch-down { background: var(--yellow-light); color: var(--yellow); }
+
+/* sort controls */
+.sort-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sort-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.sort-btn { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: var(--sans); }
+.sort-btn.active { background: var(--blue-dark); color: white; border-color: var(--blue-dark); }
+
+/* flow bar */
+.flow-bar { display: flex; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); gap: 4px; flex-wrap: wrap; background: var(--surface-2); }
+.flow-step { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--border); color: var(--text-muted); }
+.flow-step.on { background: var(--blue-light); color: var(--blue-dark); }
+.flow-arrow { color: var(--border); font-size: 12px; }
+
+/* empty state */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 15px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; line-height: 1.5; }
+
+/* toast */
+.toast { position: fixed; bottom: 28px; right: 28px; background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-md); z-index: 999; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error { border-color: var(--red); color: var(--red); }
+
+/* animations */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 900px) {
+  .page-content { padding: 16px; } header, .nav-tabs, .meta-bar { padding-left: 16px; padding-right: 16px; }
+  .summary-row { grid-template-columns: repeat(2, 1fr); }
+  .upload-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo-mark">A8</div>
+    <div>
+      <div class="header-product">Alloc8</div>
+      <div class="header-sub">powered by Noisy Beast © 2026</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline btn-sm" onclick="downloadTemplate()">↓ Template</button>
+    <button class="btn btn-outline btn-sm" onclick="clearAll()">Clear All</button>
+    <button class="btn btn-primary btn-sm" onclick="exportCSV()">Export CSV</button>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('data')">Data Input</div>
+  <div class="nav-tab" onclick="switchTab('results')">Results</div>
+  <div class="nav-tab" onclick="switchTab('plan')">Plan vs Model</div>
+</div>
+
+<div class="meta-bar">
+  <div class="meta-field">
+    <span class="meta-label">Campaign</span>
+    <input class="meta-input" id="client-name" placeholder="e.g. Deakin Always On 2026" oninput="autoSave()">
+  </div>
+  <div class="meta-divider"></div>
+  <div class="meta-field">
+    <span class="meta-label">Audience</span>
+    <input class="meta-input" id="audience" placeholder="e.g. NSL + PG" style="min-width:120px" oninput="autoSave()">
+  </div>
+  <div class="meta-field">
+    <span class="meta-label">Total Budget $</span>
+    <input class="meta-input" id="total-budget" type="number" placeholder="e.g. 2200000" style="min-width:130px" oninput="recalculate()">
+  </div>
+  <div class="meta-field">
+    <span class="meta-label">Data Source</span>
+    <input class="meta-input" id="data-source" placeholder="Roy Morgan + Amplified Intelligence" oninput="autoSave()">
+  </div>
+  <span class="saved-badge" id="last-saved"></span>
+</div>
+
+<div class="page-content">
+
+  <!-- ══ DATA INPUT ══ -->
+  <div class="tab-panel active" id="tab-data">
+    <div class="section-header" style="margin-bottom:16px">
+      <div>
+        <div class="section-title">Add Channel Data</div>
+        <div class="section-sub">Upload spreadsheets from Roy Morgan &amp; Amplified Intelligence, or enter manually below.</div>
+      </div>
+    </div>
+
+    <div class="upload-grid">
+      <div class="dropzone-card" id="dropzone">
+        <input type="file" accept=".xlsx,.xls,.csv" multiple id="file-input" onchange="handleFiles(this.files)">
+        <div class="dropzone-icon">📊</div>
+        <div class="dropzone-title">Upload spreadsheets</div>
+        <div class="dropzone-sub">Drop Excel or CSV files here, or click to browse<br><strong>Multiple files supported</strong> — merge data from several sources</div>
+      </div>
+      <div class="uploaded-files">
+        <div class="uploaded-files-header">
+          <h3>Uploaded Files</h3>
+          <button class="btn btn-ghost btn-sm" onclick="clearFiles()">Clear</button>
+        </div>
+        <div class="file-list" id="file-list"><div class="empty-files">No files uploaded yet</div></div>
+      </div>
+    </div>
+
+    <div class="manual-card">
+      <h3>Add Channel Manually</h3>
+      <div class="manual-inputs">
+        <div class="input-group">
+          <label>Channel Name</label>
+          <input class="ig-wide" id="new-channel" placeholder="e.g. BVOD" type="text" onkeydown="if(event.key==='Enter')addChannel()">
+        </div>
+        <div class="input-group">
+          <label>Avg Reach %</label>
+          <input class="ig-narrow" id="new-reach" placeholder="e.g. 44.5" type="number" step="0.1">
+        </div>
+        <div class="input-group">
+          <label>Hrs / week</label>
+          <input class="ig-narrow" id="new-hrs" placeholder="e.g. 5.0" type="number" step="0.1">
+        </div>
+        <div class="input-group">
+          <label>Attention Score</label>
+          <input class="ig-xnarrow" id="new-attn" placeholder="e.g. 1.00" type="number" step="0.01">
+        </div>
+        <div class="input-group">
+          <label>Plan Budget $ <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <input class="ig-narrow" id="new-plan" placeholder="optional" type="number" step="1000">
+        </div>
+        <div class="input-group">
+          <label>Why <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <input class="ig-wide" id="new-why" placeholder="reason for override" type="text" onkeydown="if(event.key==='Enter')addChannel()">
+        </div>
+        <button class="btn btn-primary" onclick="addChannel()" style="align-self:flex-end">+ Add Channel</button>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div>
+        <div class="section-title">Channel Data</div>
+        <div class="section-sub">Edit values inline — TARPs recalculate automatically</div>
+      </div>
+      <div class="sort-controls">
+        <span class="sort-label">Sort</span>
+        <button class="sort-btn active" id="ds-name" onclick="setSort('name')">Name</button>
+        <button class="sort-btn" id="ds-etarps" onclick="setSort('etarps')">Eff. TARPs</button>
+        <button class="sort-btn" id="ds-budget" onclick="setSort('budget')">Budget</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Avg Reach %</th>
+            <th>Hrs / week</th>
+            <th class="col-calc">TARPs</th>
+            <th>Attention Score</th>
+            <th class="col-eff">Effective TARPs</th>
+            <th>Plan Budget $</th>
+            <th>Why</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="data-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL</td><td></td><td></td>
+            <td id="ft-tarps">—</td><td></td>
+            <td id="ft-etarps">—</td>
+            <td id="ft-plan">—</td>
+            <td></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ RESULTS ══ -->
+  <div class="tab-panel" id="tab-results">
+    <div class="section-header" style="margin-bottom:16px">
+      <div>
+        <div class="section-title">Effective TARPs Applied.</div>
+        <div class="section-sub">Roy Morgan reach and time spent data, weighted by Amplified Intelligence attention scores.</div>
+      </div>
+      <div class="sort-controls">
+        <span class="sort-label">Sort</span>
+        <button class="sort-btn active" id="rs-etarps" onclick="setResSort('etarps')">Eff. TARPs</button>
+        <button class="sort-btn" id="rs-reach" onclick="setResSort('reach')">Reach</button>
+        <button class="sort-btn" id="rs-budget" onclick="setResSort('budget')">Budget</button>
+      </div>
+    </div>
+
+    <div class="summary-row">
+      <div class="stat-card"><div class="stat-label">Total TARPs</div><div class="stat-value" id="sc-tarps">—</div><div class="stat-sub">reach × time</div></div>
+      <div class="stat-card"><div class="stat-label">Effective TARPs</div><div class="stat-value blue" id="sc-etarps">—</div><div class="stat-sub">attention weighted</div></div>
+      <div class="stat-card"><div class="stat-label">Model Budget</div><div class="stat-value green" id="sc-model">—</div><div class="stat-sub">from Eff. TARPs share</div></div>
+      <div class="stat-card"><div class="stat-label">Plan Budget</div><div class="stat-value yellow" id="sc-plan">—</div><div class="stat-sub">after strategic overrides</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <div>
+          <h3>Channel Allocation</h3>
+          <div class="table-card-meta">Audience data (reach × time) → TARPs → Attention weighting → Effective TARPs → Budget</div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Avg Reach %</th>
+            <th>Hrs / week</th>
+            <th class="col-calc">TARPs</th>
+            <th>Attention</th>
+            <th class="col-eff">Effective TARPs</th>
+            <th class="col-eff">% Share</th>
+            <th class="col-calc">Implied Budget</th>
+          </tr>
+        </thead>
+        <tbody id="res-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL</td><td></td><td></td>
+            <td id="rt-tarps">—</td><td></td>
+            <td id="rt-etarps">—</td>
+            <td>100%</td>
+            <td id="rt-budget">—</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="flow-bar">
+        <span class="flow-step on">Audience data</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">Reach × Time</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">TARPs</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">Attention weighting</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">Effective TARPs</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">CPM benchmarks</span><span class="flow-arrow">→</span>
+        <span class="flow-step on">Budget</span><span class="flow-arrow">→</span>
+        <span class="flow-step">Effectiveness thresholds</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PLAN VS MODEL ══ -->
+  <div class="tab-panel" id="tab-plan">
+    <div class="section-header" style="margin-bottom:16px">
+      <div>
+        <div class="section-title">Where we followed the model / and where we made deliberate change.</div>
+        <div class="section-sub">Effective TARPs set the foundation. Strategic adjustments refine the plan.</div>
+      </div>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Model $</th>
+            <th>Plan $</th>
+            <th>Change</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody id="plan-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL</td>
+            <td id="pt-model">—</td>
+            <td id="pt-plan">—</td>
+            <td></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let channels = [];
+let uploadedFiles = [];
+let sortBy = 'name';
+let resSortBy = 'etarps';
+
+// ── INIT ──
+function init() {
+  const saved = localStorage.getItem('nb-tarps-v3');
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      channels = d.channels || [];
+      if (d.client) document.getElementById('client-name').value = d.client;
+      if (d.audience) document.getElementById('audience').value = d.audience;
+      if (d.budget) document.getElementById('total-budget').value = d.budget;
+      if (d.source) document.getElementById('data-source').value = d.source;
+    } catch(e) { channels = []; }
+  }
+  render();
+}
+
+// ── TABS ──
+const TABS = ['data','results','plan'];
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach((t,i) => { t.classList.toggle('active', TABS[i]===name); });
+  document.getElementById('tab-'+name).classList.add('active');
+  render();
+}
+
+// ── CALCS ──
+function tarps(ch)  { return ch.reach * ch.hrs; }
+function etarps(ch) { return Math.round(tarps(ch) * ch.attn); }
+function budget()   { return parseFloat(document.getElementById('total-budget').value) || 0; }
+
+function totals() {
+  let tt=0, te=0, tp=0;
+  channels.forEach(ch => { tt+=tarps(ch); te+=etarps(ch); if(ch.plan) tp+=ch.plan; });
+  return { tt, te, tp };
+}
+
+function implied(ch, te) {
+  const share = te > 0 ? etarps(ch)/te : 0;
+  return Math.round(share * budget());
+}
+
+// ── SORT ──
+function setSort(s) {
+  sortBy = s;
+  document.querySelectorAll('[id^="ds-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('ds-'+s).classList.add('active');
+  render();
+}
+function setResSort(s) {
+  resSortBy = s;
+  document.querySelectorAll('[id^="rs-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('rs-'+s).classList.add('active');
+  render();
+}
+function sorted(by) {
+  const { te } = totals();
+  return [...channels].sort((a,b) => {
+    if (by==='name')   return a.name.localeCompare(b.name);
+    if (by==='etarps') return etarps(b)-etarps(a);
+    if (by==='reach')  return b.reach-a.reach;
+    if (by==='budget') return implied(b,te)-implied(a,te);
+    return 0;
+  });
+}
+
+// ── RENDER ──
+function render() { renderData(); renderResults(); renderPlan(); renderCards(); }
+
+function renderData() {
+  const tbody = document.getElementById('data-tbody');
+  const { tt, te, tp } = totals();
+  if (!channels.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📋</div><h3>No channels yet</h3><p>Upload a spreadsheet above or add channels manually.<br>Need the format? Download the template from the top right.</p></div></td></tr>`;
+    ['ft-tarps','ft-etarps','ft-plan'].forEach(id=>document.getElementById(id).textContent='—');
+    return;
+  }
+  tbody.innerHTML = '';
+  sorted(sortBy).forEach(ch => {
+    const i = channels.indexOf(ch);
+    const t = tarps(ch), e = etarps(ch);
+    const ac = ch.attn>=0.9?'attn-high-input':ch.attn>=0.5?'attn-mid-input':'attn-low-input';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="ch"><input type="text" value="${x(ch.name)}" style="font-weight:700;font-size:13px;width:120px" onchange="upd(${i},'name',this.value)"></td>
+      <td><input type="number" value="${ch.reach}" step="0.1" style="width:70px" onchange="upd(${i},'reach',+this.value)"></td>
+      <td><input type="number" value="${ch.hrs}" step="0.1" style="width:60px" onchange="upd(${i},'hrs',+this.value)"></td>
+      <td class="calc">${Math.round(t)}</td>
+      <td><input type="number" value="${ch.attn}" step="0.01" style="width:65px" class="${ac}" onchange="upd(${i},'attn',+this.value)"></td>
+      <td class="eff">${e}</td>
+      <td><input type="number" value="${ch.plan||''}" step="1000" placeholder="model" style="width:110px" onchange="upd(${i},'plan',this.value?+this.value:null)"></td>
+      <td><input type="text" value="${x(ch.why||'')}" placeholder="reason for override" style="width:200px" onchange="upd(${i},'why',this.value)"></td>
+      <td><button class="btn-danger" onclick="remove(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('ft-tarps').textContent  = Math.round(tt).toLocaleString();
+  document.getElementById('ft-etarps').textContent = Math.round(te).toLocaleString();
+  document.getElementById('ft-plan').textContent   = tp>0?fmt(tp):'—';
+}
+
+function renderResults() {
+  const tbody = document.getElementById('res-tbody');
+  const { tt, te } = totals();
+  const b = budget();
+  if (!channels.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📊</div><h3>No data yet</h3><p>Add channels in the Data Input tab first.</p></div></td></tr>`;
+    ['rt-tarps','rt-etarps','rt-budget'].forEach(id=>document.getElementById(id).textContent='—');
+    return;
+  }
+  tbody.innerHTML = '';
+  sorted(resSortBy).forEach(ch => {
+    const t=tarps(ch), e=etarps(ch);
+    const share = te>0?e/te:0;
+    const imp = Math.round(share*b);
+    const pct = Math.round(share*100);
+    const ac = ch.attn>=0.9?'attn-high':ch.attn>=0.5?'attn-mid':'attn-low';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700">${x(ch.name)}</td>
+      <td class="mono">${ch.reach}%</td>
+      <td class="mono">${ch.hrs}</td>
+      <td class="calc">${Math.round(t)}</td>
+      <td><span class="attn-badge ${ac}">${ch.attn.toFixed(2)}</span></td>
+      <td class="eff">${e}</td>
+      <td><div class="share-wrap"><div class="share-bg"><div class="share-fill" style="width:${pct}%"></div></div><span class="share-pct">${pct}%</span></div></td>
+      <td class="bgt">${fmt(imp)}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('rt-tarps').textContent  = Math.round(tt).toLocaleString();
+  document.getElementById('rt-etarps').textContent = Math.round(te).toLocaleString();
+  document.getElementById('rt-budget').textContent = b?fmt(b):'—';
+}
+
+function renderPlan() {
+  const tbody = document.getElementById('plan-tbody');
+  const { te } = totals();
+  const b = budget();
+  if (!channels.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📝</div><h3>No data yet</h3><p>Add channels in the Data Input tab to see model vs plan.</p></div></td></tr>`;
+    ['pt-model','pt-plan'].forEach(id=>document.getElementById(id).textContent='—');
+    return;
+  }
+  let mt=0, pt=0;
+  tbody.innerHTML = '';
+  channels.forEach(ch => {
+    const imp = implied(ch,te);
+    const plan = ch.plan||imp;
+    mt+=imp; pt+=plan;
+    const diff=plan-imp, pct=imp>0?diff/imp:0;
+    let lbl,cls;
+    if(Math.abs(pct)<0.04){lbl='Aligned';cls='ch-aligned';}
+    else if(diff>0){lbl=`↑ +${fmt(diff)}`;cls='ch-up';}
+    else{lbl=`↓ ${fmt(diff)}`;cls='ch-down';}
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:700">${x(ch.name)}</td><td class="bgt">${fmt(imp)}</td><td class="bgt">${fmt(plan)}</td><td><span class="change-pill ${cls}">${lbl}</span></td><td style="font-size:12px;color:var(--text-secondary)">${x(ch.why||'')}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pt-model').textContent=fmt(mt);
+  document.getElementById('pt-plan').textContent=fmt(pt);
+}
+
+function renderCards() {
+  const {tt,te,tp}=totals(); const b=budget();
+  document.getElementById('sc-tarps').textContent=Math.round(tt).toLocaleString();
+  document.getElementById('sc-etarps').textContent=Math.round(te).toLocaleString();
+  document.getElementById('sc-model').textContent=b?fmt(b):'—';
+  document.getElementById('sc-plan').textContent=tp>0?fmt(tp):'—';
+}
+
+// ── MUTATIONS ──
+function upd(i,f,v){ channels[i][f]=v; recalculate(); }
+function remove(i){ channels.splice(i,1); recalculate(); }
+
+function addChannel() {
+  const name=document.getElementById('new-channel').value.trim();
+  const reach=parseFloat(document.getElementById('new-reach').value);
+  const hrs=parseFloat(document.getElementById('new-hrs').value);
+  const attn=parseFloat(document.getElementById('new-attn').value);
+  const plan=parseFloat(document.getElementById('new-plan').value)||null;
+  const why=document.getElementById('new-why').value.trim();
+  if(!name||isNaN(reach)||isNaN(hrs)||isNaN(attn)){showToast('Fill in Channel, Reach %, Hrs/week and Attention Score','error');return;}
+  const ex=channels.find(c=>c.name.toLowerCase()===name.toLowerCase());
+  if(ex){Object.assign(ex,{reach,hrs,attn});if(plan)ex.plan=plan;if(why)ex.why=why;}
+  else channels.push({name,reach,hrs,attn,plan,why});
+  ['new-channel','new-reach','new-hrs','new-attn','new-plan','new-why'].forEach(id=>document.getElementById(id).value='');
+  recalculate();
+  showToast(`${name} ${ex?'updated':'added'} ✓`,'success');
+}
+
+function recalculate(){ render(); autoSave(); }
+
+function clearAll() {
+  if(!confirm('Clear all channels and start fresh?')) return;
+  channels=[]; uploadedFiles=[]; renderFileList(); recalculate();
+}
+
+// ── FILE UPLOAD ──
+function handleFiles(files) { Array.from(files).forEach(processFile); document.getElementById('file-input').value=''; }
+
+function processFile(file) {
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const rec={name:file.name,size:file.size,channels:0,status:'ok',error:''};
+    try {
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const sn=wb.SheetNames.includes('Channel Data')?'Channel Data':wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+      let hr=-1;
+      for(let i=0;i<rows.length;i++){if(String(rows[i][0]).trim().toLowerCase()==='channel'){hr=i;break;}}
+      if(hr===-1) throw new Error('No "Channel" header found');
+      const h=rows[hr].map(c=>String(c).trim().toLowerCase());
+      const ci={ch:h.findIndex(c=>c==='channel'),re:h.findIndex(c=>c.includes('reach')),hr:h.findIndex(c=>c.includes('hrs')||c.includes('hour')),at:h.findIndex(c=>c.includes('attention')),pl:h.findIndex(c=>c.includes('plan')||c.includes('budget')),wy:h.findIndex(c=>c.includes('why')||c.includes('reason'))};
+      if(ci.ch<0||ci.re<0||ci.hr<0||ci.at<0) throw new Error('Missing columns: Channel, Avg Reach %, Hrs/week, Attention Score');
+      let count=0;
+      for(let i=hr+1;i<rows.length;i++){
+        const r=rows[i];
+        const name=String(r[ci.ch]||'').trim();
+        const reach=parseFloat(r[ci.re]),hrs=parseFloat(r[ci.hr]),attn=parseFloat(r[ci.at]);
+        if(!name||isNaN(reach)||isNaN(hrs)||isNaN(attn)) continue;
+        const plan=ci.pl>-1?parseFloat(r[ci.pl])||null:null;
+        const why=ci.wy>-1?String(r[ci.wy]||'').trim():'';
+        const ex=channels.find(c=>c.name.toLowerCase()===name.toLowerCase());
+        if(ex){Object.assign(ex,{reach,hrs,attn});if(plan)ex.plan=plan;if(why)ex.why=why;}
+        else channels.push({name,reach,hrs,attn,plan,why});
+        count++;
+      }
+      rec.channels=count;
+      if(!count) throw new Error('No valid rows found');
+    } catch(err){rec.status='error';rec.error=err.message;}
+    uploadedFiles.push(rec);
+    renderFileList();
+    recalculate();
+    showToast(rec.status==='ok'?`${rec.channels} channels imported from ${file.name} ✓`:`Error: ${rec.error}`, rec.status==='ok'?'success':'error');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderFileList() {
+  const list=document.getElementById('file-list');
+  if(!uploadedFiles.length){list.innerHTML='<div class="empty-files">No files uploaded yet</div>';return;}
+  list.innerHTML=uploadedFiles.map((f,i)=>`
+    <div class="file-item">
+      <div class="file-icon">📄</div>
+      <div class="file-info">
+        <div class="file-name">${x(f.name)}</div>
+        <div class="file-meta">${f.status==='ok'?f.channels+' channels · ':''}${(f.size/1024).toFixed(1)}KB${f.error?' · '+f.error:''}</div>
+      </div>
+      <span class="file-status ${f.status==='ok'?'status-ok':'status-err'}">${f.status==='ok'?'Imported':'Error'}</span>
+      <button class="btn-danger" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeFile(i){ uploadedFiles.splice(i,1); renderFileList(); }
+function clearFiles(){ uploadedFiles=[]; renderFileList(); }
+
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
+
+// ── TEMPLATE ──
+function downloadTemplate() {
+  const wb=XLSX.utils.book_new();
+  const d=[
+    ['ALLOC8 — Noisy Beast'],[''],
+    ['Column Guide:'],
+    ['  Channel          — Media channel name (e.g. BVOD, Social, OOH)'],
+    ['  Avg Reach %      — Roy Morgan avg weekly reach % (e.g. 44.5 for 44.5%)'],
+    ['  Hrs/week         — Roy Morgan avg hours per week with medium (e.g. 5.0)'],
+    ['  Attention Score  — Amplified Intelligence score (1.00 = 100%, 0.35 = 35%)'],
+    ['  Plan Budget ($)  — Optional: your planned spend. Leave blank = use model'],
+    ['  Why              — Optional: reason for any deviation from model'],[''],
+    ['Channel','Avg Reach %','Hrs/week','Attention Score','Plan Budget ($)','Why'],
+    ['BVOD','','','','',''],['Social','','','','',''],['YouTube','','','','',''],
+    ['OOH','','','','',''],['Radio/Audio','','','','',''],
+    ['TV','','','','',''],['Cinema','','','','',''],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(d);
+  ws['!cols']=[{wch:20},{wch:14},{wch:12},{wch:18},{wch:18},{wch:55}];
+  XLSX.utils.book_append_sheet(wb,ws,'Channel Data');
+  const ref=[
+    ['REFERENCE — Amplified Intelligence Attention Scores'],[''],
+    ['Channel','Typical Score','Notes'],
+    ['Cinema','~1.06','Captive lean-in — highest attention'],
+    ['BVOD / Streaming','~1.00','80% of ad watched on average'],
+    ['Radio / Audio','~0.75','3× attention of Facebook, 2× TikTok'],
+    ['OOH','~0.57','Varies by format and dwell'],
+    ['YouTube','~0.55','Skippable reduces attention'],
+    ['Linear TV','~0.45','Second-screen behaviour'],
+    ['Social (scrollable)','~0.35','Drops to single digits within 15s'],
+  ];
+  const ws2=XLSX.utils.aoa_to_sheet(ref);
+  ws2['!cols']=[{wch:24},{wch:16},{wch:50}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Reference');
+  XLSX.writeFile(wb,'tarps-planner-template.xlsx');
+  showToast('Template downloaded ✓','success');
+}
+
+// ── EXPORT ──
+function exportCSV() {
+  if(!channels.length){showToast('No data to export','error');return;}
+  const {te}=totals(); const b=budget();
+  const client=document.getElementById('client-name').value||'Unnamed Campaign';
+  let csv=`Alloc8 — ${client}\nTotal Budget,$${b}\n\n`;
+  csv+=`Channel,Avg Reach %,Hrs/week,TARPs,Attention,Effective TARPs,% Share,Implied Budget,Plan Budget,Change,Why\n`;
+  channels.forEach(ch=>{
+    const t=tarps(ch),e=etarps(ch);
+    const share=te>0?e/te:0, imp=Math.round(share*b), plan=ch.plan||imp, diff=plan-imp;
+    const chg=Math.abs(diff/imp)<0.04?'Aligned':diff>0?'Increased':'Reduced';
+    csv+=`"${ch.name}",${ch.reach},${ch.hrs},${Math.round(t)},${ch.attn},${e},${Math.round(share*100)}%,$${imp},$${plan},${chg},"${ch.why||''}"\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`tarps-planner-${Date.now()}.csv`;
+  a.click();
+  showToast('CSV exported ✓','success');
+}
+
+// ── PERSIST ──
+let st;
+function autoSave(){
+  clearTimeout(st);
+  st=setTimeout(()=>{
+    localStorage.setItem('nb-tarps-v3',JSON.stringify({channels,client:document.getElementById('client-name').value,audience:document.getElementById('audience').value,budget:document.getElementById('total-budget').value,source:document.getElementById('data-source').value}));
+    const n=new Date();
+    document.getElementById('last-saved').textContent=`Saved ${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`;
+  },600);
+}
+
+// ── UTILS ──
+function fmt(n){if(!n)return'—';if(n>=1000000)return`$${(n/1000000).toFixed(2)}M`;if(n>=1000)return`$${Math.round(n/1000)}K`;return`$${Math.round(n).toLocaleString()}`;}
+function x(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
+
+init();
+</script>
+</body>
+</html>
